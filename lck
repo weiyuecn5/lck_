@@ -1,0 +1,140 @@
+'''
+*脚本名称:  变压器流程卡处理工具
+*功能    :  输入需要的变压器尺寸和数量,
+            脚本从Excel文件中读取流程卡,
+            生成正确的数量写入csv文件中
+'''
+import xlrd
+import csv
+
+kuan    = int(input('输入变压器柜的宽度:'))
+shen    = int(input('输入柜子的深度:'))
+guixing = int(input('输入柜型(标准0 奉贤1):'))
+gaopin  = int(input('是否拼高压(不拼0 or 拼1):'))
+dipin   = int(input('是否拼低压(不拼0 or 拼1):'))
+n       = int(input('输入数量:'))
+def get_part_list(name):
+    part_list=[]
+    data = xlrd.open_workbook('lck.xls')
+    table = data.sheet_by_name(name)
+    for i in range(table.nrows):
+        part_list.append(table.row_values(i))
+    return part_list
+
+def part_1(kuan):
+    part_1 = get_part_list('宽')
+    if kuan == 1800:
+        a = 0
+    elif kuan == 1900:
+        a = 6
+    elif kuan == 2000:
+        a = 12
+    elif kuan == 2100:
+        a = 18
+    elif kuan == 2200:
+        a = 24
+    elif kuan == 2300:
+        a = 30
+    elif kuan == 2400:
+        a = 36
+    elif kuan == 2500:
+        a = 42
+    elif kuan == 2600:
+        a = 48
+    else:
+        return None
+    if 2000< kuan < 2500:
+        part = part_1[a:a+6]+part_1[54:55]
+    elif kuan > 2400:
+        part = part_1[a:a+6]+part_1[55:57]
+    else:
+        part = part_1[a:a+6]
+    return part
+def part_2(shen,gaopin,dipin):
+    part_1 = get_part_list('深')
+    if shen == 1400:
+        a = 0
+    elif shen == 1450:
+        a = 7
+    elif shen == 1500:
+        a = 14
+    elif shen == 1550:
+        a = 21
+    elif shen == 1600:
+        a = 28
+    elif shen == 1650:
+        a = 35
+    else:
+        return None
+    part = part_1[a:a+3]
+    if gaopin == 0 and dipin == 0:
+        part_1[a+3][4]=part_1[a+3][4]*2
+        part_1[a+4][4]=part_1[a+4][4]*2
+        part = part + part_1[a+3:a+5]
+    elif gaopin == 1 and dipin == 0:
+        part = part + part_1[a+3:a+5]
+    elif gaopin == 0 and dipin == 1:
+        part = part + part_1[a+3:a+7]
+    elif gaopin == 1 and dipin == 1:
+        part = part + part_1[a+5:a+7]
+    return part
+def part_3(kuan,guixing):
+    part_1 = get_part_list('门')
+    if kuan == 1800:
+        a = 0
+    elif kuan == 1900:
+        a = 3
+    elif kuan == 2000:
+        a = 6
+    elif kuan == 2100:
+        a = 9
+    elif kuan == 2200:
+        a = 12
+    elif kuan == 2300:
+        a = 15
+    elif kuan == 2400:
+        a = 18
+    elif kuan == 2500:
+        a = 21
+    elif kuan == 2600:
+        a = 24
+    else:
+        return None
+    if guixing == 1:
+        part_1[a][4] = 3
+        part = part_1[a:a+2]
+    else:
+        part = part_1[a:a+3]
+    return part
+def part_4(guixing):
+    part_1 = get_part_list('柜型')
+    if guixing == 1:    #柜型 标准0-5,奉贤6-7
+        part = part_1[6:8]
+    else:
+        part = part_1[0:5]
+    return part
+def part_5(kuan,shen):
+    dic = {}
+    for i in get_part_list('顶'):
+        dic[i[0]] = i
+    part = [dic['%s-%s'%(shen,kuan)]]
+    return part
+def get_list1(kuan,shen,guixing,gaopin,dipin,n):
+    #输入柜子的宽度,高度,柜型,高低压拼箱返回流程卡的列表
+    part_list = get_part_list('基本')
+    part1 = part_1(kuan)
+    part2 = part_2(shen,gaopin,dipin)
+    part3 = part_3(kuan,guixing)
+    part4 = part_4(guixing)
+    part5 = part_5(kuan,shen)
+    full_list = part_list+part1+part2+part3+part4+part5
+    if n>1:
+        for j in full_list:
+            j[4] = j[4] * n
+    return full_list
+
+lck_list = get_list1(kuan,shen,guixing,gaopin,dipin,n)
+print(len(lck_list))
+with open('new_lck.csv','w',newline='') as f:
+    csvwrite = csv.writer(f)
+    csvwrite.writerows(lck_list)
